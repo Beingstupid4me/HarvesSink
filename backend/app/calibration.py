@@ -79,6 +79,11 @@ class CalibrationEngine:
         """Load a previously persisted baseline."""
         self._baselines[baseline.device_id] = baseline
 
+    def reset(self, device_id: str):
+        """Clear calibration for a device so it re-learns from scratch."""
+        self._buffers.pop(device_id, None)
+        self._baselines.pop(device_id, None)
+
 
 class ValveController:
     """

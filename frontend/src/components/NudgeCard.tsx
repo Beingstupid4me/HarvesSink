@@ -15,7 +15,6 @@ export default function NudgeCard({ reading }: NudgeCardProps) {
   useEffect(() => {
     if (!reading) return;
 
-    // Refresh nudge every 15 seconds
     const timer = setInterval(async () => {
       try {
         const n = await fetchApi<SustainabilityNudge>(
@@ -27,7 +26,6 @@ export default function NudgeCard({ reading }: NudgeCardProps) {
       }
     }, 15000);
 
-    // Fetch immediately
     fetchApi<SustainabilityNudge>(`/api/nudge/${reading.device_id}`)
       .then(setNudge)
       .catch(() => {});
@@ -38,19 +36,19 @@ export default function NudgeCard({ reading }: NudgeCardProps) {
   if (!nudge) return null;
 
   return (
-    <div className="rounded-xl border border-harvest-border bg-harvest-card p-4">
+    <div className="rounded-xl border border-border-primary bg-card p-3 sm:p-4">
       <div className="flex items-start gap-3">
-        <Lightbulb className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-400" />
+        <Lightbulb className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-500" />
         <div>
-          <p className="text-sm font-semibold text-slate-200">
+          <p className="text-xs font-semibold sm:text-sm">
             💡 Sustainability Tip
           </p>
           {nudge.activity_guess && (
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-[10px] text-muted sm:text-xs">
               Detected: {nudge.activity_guess}
             </p>
           )}
-          <p className="mt-2 text-sm text-slate-300">{nudge.tip || nudge.message}</p>
+          <p className="mt-1.5 text-xs text-secondary sm:mt-2 sm:text-sm">{nudge.tip || nudge.message}</p>
         </div>
       </div>
     </div>

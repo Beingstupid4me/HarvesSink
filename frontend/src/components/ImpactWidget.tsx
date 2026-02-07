@@ -10,29 +10,29 @@ interface ImpactWidgetProps {
 
 export default function ImpactWidget({ liters, money, lake }: ImpactWidgetProps) {
   return (
-    <div className="grid grid-cols-3 gap-4">
-      <div className="rounded-xl border border-harvest-border bg-harvest-card p-4 text-center">
-        <Droplets className="mx-auto h-6 w-6 text-blue-400" />
-        <p className="mt-2 font-mono text-2xl font-bold text-blue-300">
+    <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="rounded-xl border border-border-primary bg-card p-3 text-center sm:p-4">
+        <Droplets className="mx-auto h-5 w-5 text-blue-500 sm:h-6 sm:w-6" />
+        <p className="mt-1.5 font-mono text-lg font-bold text-blue-600 dark:text-blue-300 sm:mt-2 sm:text-2xl">
           {liters.toFixed(1)}
         </p>
-        <p className="text-xs text-slate-400">Liters Saved</p>
+        <p className="text-[10px] text-muted sm:text-xs">Liters Saved</p>
       </div>
 
-      <div className="rounded-xl border border-harvest-border bg-harvest-card p-4 text-center">
-        <Banknote className="mx-auto h-6 w-6 text-emerald-400" />
-        <p className="mt-2 font-mono text-2xl font-bold text-emerald-300">
+      <div className="rounded-xl border border-border-primary bg-card p-3 text-center sm:p-4">
+        <Banknote className="mx-auto h-5 w-5 text-emerald-500 sm:h-6 sm:w-6" />
+        <p className="mt-1.5 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-300 sm:mt-2 sm:text-2xl">
           ₹{money.toFixed(0)}
         </p>
-        <p className="text-xs text-slate-400">Money Saved</p>
+        <p className="text-[10px] text-muted sm:text-xs">Money Saved</p>
       </div>
 
-      <div className="rounded-xl border border-harvest-border bg-harvest-card p-4 text-center">
-        <Waves className="mx-auto h-6 w-6 text-cyan-400" />
-        <p className="mt-2 font-mono text-2xl font-bold text-cyan-300">
+      <div className="rounded-xl border border-border-primary bg-card p-3 text-center sm:p-4">
+        <Waves className="mx-auto h-5 w-5 text-cyan-500 sm:h-6 sm:w-6" />
+        <p className="mt-1.5 font-mono text-lg font-bold text-cyan-600 dark:text-cyan-300 sm:mt-2 sm:text-2xl">
           {lake.toFixed(1)}
         </p>
-        <p className="text-xs text-slate-400">Lake Impact</p>
+        <p className="text-[10px] text-muted sm:text-xs">Lake Impact</p>
       </div>
     </div>
   );

@@ -2,10 +2,10 @@
 
 import { Droplets, Building2, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import HouseholdDashboard from "@/components/HouseholdDashboard";
+import MunicipalDashboard from "@/components/MunicipalDashboard";
 import Link from "next/link";
 
-export default function Home() {
+export default function MunicipalPage() {
   const { theme, toggle } = useTheme();
 
   return (
@@ -26,17 +26,17 @@ export default function Home() {
           <div className="flex items-center gap-2">
             {/* Nav links */}
             <div className="flex rounded-lg border border-border-primary bg-card p-0.5 sm:p-1">
-              <span className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white sm:px-3 sm:py-1.5 sm:text-sm">
-                <Droplets className="h-3.5 w-3.5" />
-                <span className="hidden xs:inline">Household</span>
-              </span>
               <Link
-                href="/municipal"
+                href="/"
                 className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-secondary hover:text-primary sm:px-3 sm:py-1.5 sm:text-sm"
               >
+                <Droplets className="h-3.5 w-3.5" />
+                <span className="hidden xs:inline">Household</span>
+              </Link>
+              <span className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white sm:px-3 sm:py-1.5 sm:text-sm">
                 <Building2 className="h-3.5 w-3.5" />
                 <span className="hidden xs:inline">Municipal</span>
-              </Link>
+              </span>
             </div>
 
             {/* Theme toggle */}
@@ -57,7 +57,7 @@ export default function Home() {
 
       {/* ── Dashboard Content ──────────────────────────── */}
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-6">
-        <HouseholdDashboard />
+        <MunicipalDashboard />
       </div>
     </main>
   );

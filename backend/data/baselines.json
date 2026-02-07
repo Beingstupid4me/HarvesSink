@@ -1,0 +1,13 @@
+{
+  "HVS-001": {
+    "device_id": "HVS-001",
+    "ph_mean": 7.031,
+    "ph_std": 0.193,
+    "tds_mean": 176.44,
+    "tds_std": 8.851,
+    "turbidity_mean": 0.873,
+    "turbidity_std": 0.564,
+    "sample_count": 50,
+    "is_complete": true
+  }
+}

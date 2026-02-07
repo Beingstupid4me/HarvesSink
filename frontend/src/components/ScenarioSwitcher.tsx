@@ -28,20 +28,20 @@ export default function ScenarioSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <FlaskConical className="h-4 w-4 text-slate-500" />
-      <span className="text-xs text-slate-500">Scenario:</span>
-      <div className="flex gap-1">
+    <div className="flex items-center gap-1.5 sm:gap-2">
+      <FlaskConical className="hidden h-4 w-4 text-muted sm:block" />
+      <span className="hidden text-xs text-muted sm:inline">Scenario:</span>
+      <div className="flex gap-0.5 sm:gap-1">
         {SCENARIOS.map((s) => (
           <button
             key={s.id}
             onClick={() => switchScenario(s.id)}
             disabled={loading}
             title={s.label}
-            className={`rounded px-2 py-1 text-xs transition-all ${
+            className={`rounded px-1.5 py-1 text-xs transition-all sm:px-2 ${
               active === s.id
-                ? "bg-blue-600/30 text-blue-300"
-                : "text-slate-500 hover:bg-slate-700 hover:text-slate-300"
+                ? "bg-blue-600/30 text-blue-600 dark:text-blue-300"
+                : "text-muted hover:bg-gray-100 hover:text-secondary dark:hover:bg-slate-700"
             }`}
           >
             {s.emoji}

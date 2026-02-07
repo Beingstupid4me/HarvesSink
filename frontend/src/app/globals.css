@@ -2,18 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── CSS custom properties for theme ─────────────────── */
 :root {
+  --bg-primary: #ffffff;
+  --bg-card: #f8fafc;
+  --bg-nav: rgba(255,255,255,0.9);
+  --border-primary: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+}
+
+.dark {
   --bg-primary: #0f172a;
   --bg-card: #1e293b;
-  --border: #334155;
+  --bg-nav: rgba(15,23,42,0.9);
+  --border-primary: #334155;
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
+  --text-muted: #64748b;
 }
 
 body {
-  @apply bg-harvest-dark text-slate-100 antialiased;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── Utility classes using CSS vars ──────────────────── */
+.bg-primary   { background-color: var(--bg-primary); }
+.bg-card      { background-color: var(--bg-card); }
+.bg-nav       { background-color: var(--bg-nav); }
+.border-border-primary { border-color: var(--border-primary); }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted   { color: var(--text-muted); }
 
 /* Gauge glow effects */
 .glow-green { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
@@ -25,7 +49,18 @@ body {
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling - dark */
+.dark ::-webkit-scrollbar { width: 6px; }
+.dark ::-webkit-scrollbar-track { background: #1e293b; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+/* Scrollbar styling - light */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1e293b; }
-::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* Leaflet overrides */
+.leaflet-container {
+  background: var(--bg-card) !important;
+  border-radius: 0.75rem;
+}

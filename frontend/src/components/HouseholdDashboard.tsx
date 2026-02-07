@@ -8,10 +8,13 @@ import ValveStatus from "./ValveStatus";
 import TimeSeriesChart from "./TimeSeriesChart";
 import NudgeCard from "./NudgeCard";
 import ScenarioSwitcher from "./ScenarioSwitcher";
-import { Wifi, WifiOff } from "lucide-react";
+import { Wifi, WifiOff, RotateCcw } from "lucide-react";
+import { postApi } from "@/lib/api";
+import { useState } from "react";
 
 export default function HouseholdDashboard() {
   const { latest, history, connected } = useLiveStream();
+  const [calibrating, setCalibrating] = useState(false);
 
   const reading = latest?.reading;
   const inference = latest?.inference;
@@ -25,29 +28,47 @@ export default function HouseholdDashboard() {
       ? "border-harvest-amber/30"
       : "border-harvest-red/30";
 
+  const handleRecalibrate = async () => {
+    setCalibrating(true);
+    try {
+      await postApi("/api/calibration/reset/" + (reading?.device_id || "HVS-001"));
+    } catch { /* ignore */ }
+    setCalibrating(false);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* ── Connection status + Scenario switcher ─────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-sm">
           {connected ? (
             <>
-              <Wifi className="h-4 w-4 text-green-400" />
-              <span className="text-green-400">Connected</span>
+              <Wifi className="h-4 w-4 text-green-500" />
+              <span className="text-green-500">Connected</span>
             </>
           ) : (
             <>
-              <WifiOff className="h-4 w-4 text-red-400" />
-              <span className="text-red-400">Reconnecting…</span>
+              <WifiOff className="h-4 w-4 text-red-500" />
+              <span className="text-red-500">Reconnecting…</span>
             </>
           )}
           {reading && (
-            <span className="ml-3 text-slate-500">
+            <span className="ml-3 text-muted">
               Device: {reading.device_id}
             </span>
           )}
         </div>
-        <ScenarioSwitcher />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRecalibrate}
+            disabled={calibrating}
+            className="flex items-center gap-1.5 rounded-lg border border-border-primary bg-card px-3 py-1.5 text-xs text-secondary hover:text-primary disabled:opacity-50"
+          >
+            <RotateCcw className={`h-3.5 w-3.5 ${calibrating ? "animate-spin" : ""}`} />
+            Recalibrate
+          </button>
+          <ScenarioSwitcher />
+        </div>
       </div>
 
       {/* ── Calibration progress ──────────────────────── */}
@@ -60,7 +81,7 @@ export default function HouseholdDashboard() {
 
       {/* ── Live gauges ───────────────────────────────── */}
       <div
-        className={`grid grid-cols-2 gap-4 rounded-xl border-2 p-4 state-transition md:grid-cols-4 ${bgTint}`}
+        className={`grid grid-cols-2 gap-3 rounded-xl border-2 p-3 state-transition sm:gap-4 sm:p-4 lg:grid-cols-4 ${bgTint}`}
       >
         <GaugeCard
           label="pH"
@@ -97,19 +118,19 @@ export default function HouseholdDashboard() {
       </div>
 
       {/* ── AI predictions ────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-harvest-border bg-harvest-card p-4">
-          <p className="text-xs text-slate-400">BOD (Predicted)</p>
-          <p className="mt-1 font-mono text-2xl font-bold text-orange-400">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="rounded-xl border border-border-primary bg-card p-3 sm:p-4">
+          <p className="text-xs text-muted">BOD (Predicted)</p>
+          <p className="mt-1 font-mono text-xl font-bold text-orange-500 dark:text-orange-400 sm:text-2xl">
             {inference?.bod_predicted?.toFixed(1) ?? "—"}{" "}
-            <span className="text-sm text-slate-500">mg/L</span>
+            <span className="text-sm text-muted">mg/L</span>
           </p>
         </div>
-        <div className="rounded-xl border border-harvest-border bg-harvest-card p-4">
-          <p className="text-xs text-slate-400">COD (Predicted)</p>
-          <p className="mt-1 font-mono text-2xl font-bold text-purple-400">
+        <div className="rounded-xl border border-border-primary bg-card p-3 sm:p-4">
+          <p className="text-xs text-muted">COD (Predicted)</p>
+          <p className="mt-1 font-mono text-xl font-bold text-purple-500 dark:text-purple-400 sm:text-2xl">
             {inference?.cod_predicted?.toFixed(1) ?? "—"}{" "}
-            <span className="text-sm text-slate-500">mg/L</span>
+            <span className="text-sm text-muted">mg/L</span>
           </p>
         </div>
       </div>

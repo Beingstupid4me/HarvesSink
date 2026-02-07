@@ -13,21 +13,21 @@ const STATUS_CONFIG = {
     label: "HARVESTING",
     sublabel: "Water quality is within safe limits",
     bg: "bg-green-500/10 border-green-500/30",
-    text: "text-green-400",
+    text: "text-green-600 dark:text-green-400",
   },
   caution: {
     icon: ShieldAlert,
     label: "CAUTION",
     sublabel: "Water quality deviating from baseline",
     bg: "bg-amber-500/10 border-amber-500/30",
-    text: "text-amber-400",
+    text: "text-amber-600 dark:text-amber-400",
   },
   drain: {
     icon: ShieldX,
     label: "DRAINING",
     sublabel: "Water exceeds safety thresholds",
     bg: "bg-red-500/10 border-red-500/30",
-    text: "text-red-400",
+    text: "text-red-600 dark:text-red-400",
   },
 };
 
@@ -37,12 +37,12 @@ export default function ValveStatus({ decision, anomaly }: ValveStatusProps) {
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-xl border p-4 state-transition ${cfg.bg}`}
+      className={`flex items-center gap-3 rounded-xl border p-3 state-transition sm:gap-4 sm:p-4 ${cfg.bg}`}
     >
-      <Icon className={`h-8 w-8 ${cfg.text}`} />
+      <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${cfg.text}`} />
       <div>
-        <p className={`text-lg font-bold ${cfg.text}`}>{cfg.label}</p>
-        <p className="text-xs text-slate-400">
+        <p className={`text-base font-bold sm:text-lg ${cfg.text}`}>{cfg.label}</p>
+        <p className="text-[11px] text-muted sm:text-xs">
           {anomaly ? "⚠️ Sensor anomaly detected — auto-draining" : cfg.sublabel}
         </p>
       </div>

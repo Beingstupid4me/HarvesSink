@@ -24,7 +24,7 @@ export default function MunicipalDashboard() {
 
   useEffect(() => {
     refresh();
-    const timer = setInterval(refresh, 10000); // refresh every 10s
+    const timer = setInterval(refresh, 10000);
     return () => clearInterval(timer);
   }, []);
 
@@ -33,16 +33,16 @@ export default function MunicipalDashboard() {
   const poor = nodes.filter((n) => n.quality === "poor").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* ── Header ───────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-200">
+        <h2 className="text-base font-bold sm:text-lg">
           Municipal Monitor — {nodes.length} Nodes
         </h2>
         <button
           onClick={refresh}
           disabled={loading}
-          className="flex items-center gap-1.5 rounded-lg border border-harvest-border bg-harvest-card px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg border border-border-primary bg-card px-2.5 py-1.5 text-xs text-secondary hover:text-primary disabled:opacity-50"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh
@@ -50,24 +50,24 @@ export default function MunicipalDashboard() {
       </div>
 
       {/* ── Summary stats ─────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-4 text-center">
-          <p className="font-mono text-2xl font-bold text-green-400">{good}</p>
-          <p className="text-xs text-slate-400">Good</p>
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 text-center sm:p-4">
+          <p className="font-mono text-xl font-bold text-green-500 sm:text-2xl">{good}</p>
+          <p className="text-[10px] text-muted sm:text-xs">Good</p>
         </div>
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
-          <p className="font-mono text-2xl font-bold text-amber-400">{caution}</p>
-          <p className="text-xs text-slate-400">Caution</p>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center sm:p-4">
+          <p className="font-mono text-xl font-bold text-amber-500 sm:text-2xl">{caution}</p>
+          <p className="text-[10px] text-muted sm:text-xs">Caution</p>
         </div>
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-center">
-          <p className="font-mono text-2xl font-bold text-red-400">{poor}</p>
-          <p className="text-xs text-slate-400">Poor</p>
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-center sm:p-4">
+          <p className="font-mono text-xl font-bold text-red-500 sm:text-2xl">{poor}</p>
+          <p className="text-[10px] text-muted sm:text-xs">Poor</p>
         </div>
       </div>
 
       {/* ── Geospatial map ────────────────────────────── */}
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-slate-300">
+        <h3 className="mb-2 text-xs font-semibold text-secondary sm:text-sm">
           🗺️ Node Heatmap
         </h3>
         <MapView nodes={nodes} />
@@ -75,7 +75,7 @@ export default function MunicipalDashboard() {
 
       {/* ── Cluster analysis ──────────────────────────── */}
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-slate-300">
+        <h3 className="mb-2 text-xs font-semibold text-secondary sm:text-sm">
           🔍 Cluster Analysis
         </h3>
         <ClusterAnalysis nodes={nodes} />
