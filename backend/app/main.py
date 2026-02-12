@@ -15,11 +15,12 @@ from app.database import (
     init_db, save_baseline, load_baselines,
     save_impact, load_impacts, save_reading, load_readings,
 )
-from app.schemas import SensorReading, LivePacket, NodeSummary, SustainabilityNudge, CalibrationBaseline
+from app.schemas import SensorReading, LivePacket, NodeSummary, SustainabilityNudge, CalibrationBaseline, InferenceResult
 from app.sources.bridge import create_data_source
 from app.sources.base import DataSource
 from app.calibration import CalibrationEngine, ValveController
 from app.ai.inference import InferenceEngine
+from app.ai.anomaly import QuadGuardEngine
 from app.ai.llm_nudge import generate_nudge
 from app.impact import ImpactTracker
 from app.municipal import get_all_node_summaries
@@ -30,6 +31,7 @@ data_source: DataSource = create_data_source()
 calibration = CalibrationEngine()
 valve = ValveController()
 engine = InferenceEngine()
+quad_guard = QuadGuardEngine()
 impact = ImpactTracker()
 
 # Connected WebSocket clients
@@ -87,6 +89,24 @@ async def _sensor_stream_loop():
             reading = await data_source.read()
             _last_readings[reading.device_id] = reading
 
+            # If Arduino is in warmup, skip calibration/inference
+            if reading.device_mode == "warmup":
+                packet = LivePacket(
+                    reading=reading,
+                    inference=InferenceResult(),
+                    valve_decision="drain",
+                    calibration_progress=0,
+                )
+                packet_json = packet.model_dump_json()
+                dead = set()
+                for ws in ws_clients:
+                    try:
+                        await ws.send_text(packet_json)
+                    except Exception:
+                        dead.add(ws)
+                ws_clients.difference_update(dead)
+                continue
+
             # Calibration phase (auto-calibrate on first connection)
             if not calibration.is_calibrated(reading.device_id):
                 reading.device_mode = "calibration"
@@ -95,17 +115,48 @@ async def _sensor_stream_loop():
                 if result and result.is_complete:
                     save_baseline(reading.device_id, result.model_dump())
 
-            # AI inference
+            # AI inference (BOD/COD only)
             inference = engine.predict(reading)
 
-            # Valve decision
+            # Quad-Guard anomaly detection (4-tier) — skipped if guard disabled
             baseline = calibration.get_baseline(reading.device_id)
+            if _guard_enabled:
+                anomaly_verdict = quad_guard.evaluate(reading, baseline)
+            else:
+                anomaly_verdict = quad_guard.evaluate(reading, None)  # produces all-clear
+                anomaly_verdict.is_anomaly = False
+                anomaly_verdict.severity = "ok"
+
+            # Valve decision (safety caps + baseline)
             decision = valve.decide(reading, baseline)
 
-            # Anomaly override
-            if inference.anomaly_flag:
-                reading.device_mode = "fault"
+            # Anomaly override — QuadGuard can force drain/caution (only when guard enabled)
+            if _guard_enabled and anomaly_verdict.is_anomaly:
+                inference.anomaly_flag = True
+                inference.anomaly_detail = anomaly_verdict.t1_detail or anomaly_verdict.t2_detail or anomaly_verdict.t3_detail or anomaly_verdict.t4_detail
+                if anomaly_verdict.severity == "critical":
+                    reading.device_mode = "fault"
+                    decision = "drain"
+                elif anomaly_verdict.severity == "warning" and decision == "harvest":
+                    decision = "caution"
+
+            # Kill-switch: if XGBoost predicts dangerous BOD/COD
+            # but Arduino is still harvesting, send "0" to force drain
+            kill_switch_active = False
+            if _kill_switch_forced:
+                # Manual override from demo button
+                kill_switch_active = True
                 decision = "drain"
+                reading.device_mode = "fault"
+            elif (
+                inference.bod_predicted > settings.bod_kill_threshold
+                or inference.cod_predicted > settings.cod_kill_threshold
+            ):
+                if reading.edge_valve == 1:  # Arduino thinks it's safe
+                    await data_source.write("0")
+                    kill_switch_active = True
+                    decision = "drain"
+                    reading.device_mode = "fault"
 
             # Impact tracking
             if decision == "harvest":
@@ -122,6 +173,9 @@ async def _sensor_stream_loop():
                 liters_saved=round(impact_data["liters_saved"], 1),
                 money_saved=impact_data["money_saved"],
                 lake_impact_score=impact_data["lake_impact_score"],
+                anomaly_tiers=anomaly_verdict.to_dict(),
+                kill_switch_active=kill_switch_active,
+                guard_enabled=_guard_enabled,
             )
 
             # Persist reading
@@ -131,7 +185,6 @@ async def _sensor_stream_loop():
                 "ph": reading.ph,
                 "tds": reading.tds,
                 "turbidity": reading.turbidity,
-                "temperature": reading.temperature,
                 "bod": inference.bod_predicted,
                 "cod": inference.cod_predicted,
                 "valve_decision": decision,
@@ -246,7 +299,7 @@ async def get_municipal_nodes():
 @app.get("/api/nudge/{device_id}", response_model=SustainabilityNudge)
 async def get_nudge(device_id: str):
     reading = _last_readings.get(device_id) or SensorReading(
-        device_id=device_id, ph=7.2, tds=300, turbidity=3.0, temperature=27.0,
+        device_id=device_id, ph=7.2, tds=300, turbidity=3.0,
     )
     nudge = await generate_nudge(reading)
     return nudge or SustainabilityNudge(message="No tip available.")
@@ -269,3 +322,55 @@ async def get_history(device_id: str, limit: int = Query(100, le=1000)):
     """Get recent readings for a device from JSON store."""
     rows = load_readings(device_id, limit)
     return rows
+
+
+# ── Kill-Switch (Reverse Handshake) ──────────────────────────
+_kill_switch_forced = False  # manual override flag
+_guard_enabled = True  # Quad-Guard toggle (can be disabled from UI)
+
+
+@app.post("/api/killswitch/trigger")
+async def killswitch_trigger():
+    """Manually force Arduino into DRAIN via serial kill-switch (demo button)."""
+    global _kill_switch_forced
+    _kill_switch_forced = True
+    await data_source.write("0")
+    return {"status": "ok", "message": "Kill-switch ACTIVATED — sent '0' to Arduino. Valve forced to DRAIN."}
+
+
+@app.post("/api/killswitch/release")
+async def killswitch_release():
+    """Release the manual kill-switch, allow Arduino to resume normal operation."""
+    global _kill_switch_forced
+    _kill_switch_forced = False
+    await data_source.write("1")
+    return {"status": "ok", "message": "Kill-switch RELEASED — sent '1' to Arduino. Normal operation resumed."}
+
+
+@app.get("/api/killswitch/status")
+async def killswitch_status():
+    """Get current kill-switch state."""
+    return {"active": _kill_switch_forced}
+
+
+# ── Quad-Guard Toggle ────────────────────────────────────────
+@app.post("/api/guard/enable")
+async def guard_enable():
+    """Enable Quad-Guard anomaly detection."""
+    global _guard_enabled
+    _guard_enabled = True
+    return {"status": "ok", "guard_enabled": True}
+
+
+@app.post("/api/guard/disable")
+async def guard_disable():
+    """Disable Quad-Guard anomaly detection."""
+    global _guard_enabled
+    _guard_enabled = False
+    return {"status": "ok", "guard_enabled": False}
+
+
+@app.get("/api/guard/status")
+async def guard_status():
+    """Get current Quad-Guard state."""
+    return {"guard_enabled": _guard_enabled}

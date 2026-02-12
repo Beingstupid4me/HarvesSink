@@ -26,7 +26,6 @@ def generate_synthetic_data(n_samples: int = 5000) -> pd.DataFrame:
     ph = rng.normal(7.2, 1.0, n_samples).clip(4, 12)
     tds = rng.normal(300, 150, n_samples).clip(50, 1500)
     turbidity = rng.exponential(5, n_samples).clip(0.1, 100)
-    temp = rng.normal(27, 4, n_samples).clip(10, 45)
 
     # BOD correlates with turbidity and TDS (organic load)
     bod = (
@@ -43,7 +42,6 @@ def generate_synthetic_data(n_samples: int = 5000) -> pd.DataFrame:
         "ph": np.round(ph, 2),
         "tds": np.round(tds, 1),
         "turbidity": np.round(turbidity, 2),
-        "temperature": np.round(temp, 1),
         "bod": np.round(bod, 2),
         "cod": np.round(cod, 2),
     })
@@ -57,7 +55,7 @@ def train_and_export():
     df.to_csv(csv_path, index=False)
     print(f"   Saved CSV → {csv_path}")
 
-    X = df[["ph", "tds", "turbidity", "temperature"]]
+    X = df[["ph", "tds", "turbidity"]]
     y = df[["bod", "cod"]]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

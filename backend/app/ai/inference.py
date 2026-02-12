@@ -1,11 +1,12 @@
 """
 HarvesSink – AI Inference Engine.
-Model 1: Soft-sensor regressor (BOD/COD prediction).
+Model 1: Soft-sensor regressor (BOD/COD prediction) using trained XGBoost V2.
 Model 2: Sensor health anomaly detector (Z-score based).
 """
 
 import os
 import numpy as np
+import pandas as pd
 from typing import Optional
 
 import joblib
@@ -13,44 +14,55 @@ import joblib
 from app.schemas import SensorReading, InferenceResult
 
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "saved_models", "soft_sensor_rf.joblib")
+# V2 XGBoost model trained on Bangalore STP data (9 locations)
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "saved_models", "harvessink_bod_v2.joblib")
+
+# Exact feature order the V2 model was trained on
+# (from notebook: X = train_df.drop(columns=['COD','BOD','Ammonia']) after one-hot encoding STP_Location)
+V2_FEATURE_COLS = [
+    "Temperature (Avg)", "Max Temperature", "Min Temperature",
+    "pH", "TSS",
+    "STP_Location_Cubbon Park", "STP_Location_Hebbal", "STP_Location_Jakkur",
+    "STP_Location_K.R. Puram", "STP_Location_Lalbagh", "STP_Location_Madiwala",
+    "STP_Location_Nagasandra", "STP_Location_Rajacanal", "STP_Location_Yelahanka",
+]
+
+# Default climate values (annual Bangalore averages) for features we don't sense
+DEFAULT_TEMP_AVG = 27.0
+DEFAULT_TEMP_MAX = 32.0
+DEFAULT_TEMP_MIN = 22.0
 
 
 class InferenceEngine:
     """
     Runs AI inference on each sensor reading.
+    BOD/COD soft-sensor only — anomaly detection moved to QuadGuardEngine.
     """
 
     def __init__(self):
         self._model = None
-        self._history: dict[str, list[dict]] = {}  # per-device sliding window
-        self.WINDOW_SIZE = 20                       # samples for anomaly detection
-        self.Z_THRESHOLD = 3.0                      # z-score threshold
 
     def load_model(self):
-        """Load the trained soft-sensor model from disk."""
+        """Load the trained V2 XGBoost soft-sensor model from disk."""
         if os.path.exists(MODEL_PATH):
             self._model = joblib.load(MODEL_PATH)
-            print(f"✅ Loaded soft-sensor model from {MODEL_PATH}")
+            print(f"✅ Loaded V2 XGBoost model from {MODEL_PATH}")
         else:
-            print(f"⚠️  No model found at {MODEL_PATH}. Run: python -m app.ai.train_model")
+            print(f"⚠️  No model found at {MODEL_PATH}. Using formula fallback.")
 
     def predict(self, reading: SensorReading) -> InferenceResult:
-        """Run both soft-sensor and anomaly detection."""
+        """Run soft-sensor prediction (anomaly detection is handled by QuadGuard)."""
         bod, cod = self._predict_bod_cod(reading)
-        anomaly, detail = self._detect_anomaly(reading)
 
         return InferenceResult(
             bod_predicted=round(bod, 2),
             cod_predicted=round(cod, 2),
-            anomaly_flag=anomaly,
-            anomaly_detail=detail,
         )
 
-    # ── Model 1: Soft-Sensor ────────────────────────────────
+    # ── Model 1: Soft-Sensor (V2 XGBoost) ───────────────────
     def _predict_bod_cod(self, reading: SensorReading) -> tuple[float, float]:
         if self._model is None:
-            # Deterministic formula fallback (swap for real model later)
+            # Deterministic formula fallback
             bod = (
                 0.8 * reading.turbidity
                 + 0.02 * reading.tds
@@ -59,48 +71,24 @@ class InferenceEngine:
             cod = bod * 2.2
             return round(max(0.0, bod), 2), round(max(0.0, cod), 2)
 
-        X = np.array([[reading.ph, reading.tds, reading.turbidity, reading.temperature]])
+        # Build the 14-feature input matching the V2 model's training columns.
+        # Sensor mapping: pH → pH, Turbidity → TSS (turbidity is a proxy for TSS).
+        # Temperature & Location use sensible defaults.
+        row = {
+            "Temperature (Avg)": DEFAULT_TEMP_AVG,
+            "Max Temperature": DEFAULT_TEMP_MAX,
+            "Min Temperature": DEFAULT_TEMP_MIN,
+            "pH": reading.ph,
+            "TSS": reading.turbidity,  # turbidity ≈ TSS proxy
+        }
+        # All STP location one-hot cols default to 0 (no specific location)
+        for col in V2_FEATURE_COLS:
+            if col not in row:
+                row[col] = 0
+
+        X = pd.DataFrame([row], columns=V2_FEATURE_COLS)
+        # Model output order: [COD, BOD, Ammonia]
         prediction = self._model.predict(X)[0]
-        return float(prediction[0]), float(prediction[1])
-
-    # ── Model 2: Anomaly Detector ───────────────────────────
-    def _detect_anomaly(self, reading: SensorReading) -> tuple[bool, str]:
-        did = reading.device_id
-        if did not in self._history:
-            self._history[did] = []
-
-        window = self._history[did]
-        window.append({"ph": reading.ph, "tds": reading.tds, "turbidity": reading.turbidity})
-        if len(window) > self.WINDOW_SIZE:
-            window.pop(0)
-
-        if len(window) < 5:
-            return False, ""
-
-        details = []
-
-        # Check for stuck sensor (zero variance)
-        for key in ["ph", "tds", "turbidity"]:
-            values = [s[key] for s in window]
-            if np.std(values) < 1e-6 and len(window) >= 10:
-                details.append(f"{key} sensor STUCK (zero variance)")
-
-        # Z-score for latest value
-        for key in ["ph", "tds", "turbidity"]:
-            values = [s[key] for s in window[:-1]]
-            if len(values) < 3:
-                continue
-            mean = np.mean(values)
-            std = np.std(values)
-            if std > 0:
-                z = abs(getattr(reading, key) - mean) / std
-                if z > self.Z_THRESHOLD:
-                    details.append(f"{key} Z-score={z:.1f} (threshold={self.Z_THRESHOLD})")
-
-        # Out-of-bounds hard check
-        if reading.ph > 14 or reading.ph < 0:
-            details.append(f"pH={reading.ph} OUT OF PHYSICAL RANGE")
-        if reading.tds < 0:
-            details.append(f"TDS={reading.tds} NEGATIVE")
-
-        return (len(details) > 0, "; ".join(details))
+        cod = float(max(0.0, prediction[0]))
+        bod = float(max(0.0, prediction[1]))
+        return round(bod, 2), round(cod, 2)

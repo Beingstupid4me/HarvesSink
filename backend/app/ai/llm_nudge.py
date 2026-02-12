@@ -30,7 +30,7 @@ async def generate_nudge(reading: SensorReading) -> Optional[SustainabilityNudge
 
         user_msg = (
             f"Current water metrics — pH: {reading.ph}, TDS: {reading.tds} ppm, "
-            f"Turbidity: {reading.turbidity} NTU, Temp: {reading.temperature}°C"
+            f"Turbidity: {reading.turbidity} NTU"
         )
 
         response = await client.chat.completions.create(

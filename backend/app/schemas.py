@@ -14,13 +14,20 @@ class SensorReading(BaseModel):
     ph: float = Field(..., ge=0, le=14)
     tds: float = Field(..., ge=0)            # ppm
     turbidity: float = Field(..., ge=0)      # NTU
-    temperature: float = Field(..., ge=-10, le=80)  # °C
     gps_lat: float = 28.6139
     gps_lng: float = 77.2090
 
     # System state
     valve_position: Literal[0, 1] = 1       # 0=Drain, 1=Harvest
-    device_mode: Literal["calibration", "active", "fault"] = "active"
+    device_mode: Literal["warmup", "calibration", "active", "fault"] = "active"
+
+    # Arduino edge fields (populated from serial, simulated otherwise)
+    edge_state: int = 2            # 0=WARMUP, 1=CALIBRATING, 2=OPERATIONAL
+    edge_progress: int = 100       # Arduino calibration progress 0-100
+    edge_base_tds: float = 0.0     # Arduino learned TDS baseline
+    edge_nudge: bool = True        # Arduino adaptive nudge active
+    edge_valve: int = 1            # Arduino valve decision 0=Drain 1=Harvest
+    edge_confidence: int = 0       # Arduino confidence counter 0-3
 
 
 # ── AI inference results ────────────────────────────────────
@@ -40,6 +47,9 @@ class LivePacket(BaseModel):
     liters_saved: float = 0.0
     money_saved: float = 0.0
     lake_impact_score: float = 0.0
+    anomaly_tiers: dict = {}  # Quad-Guard per-tier breakdown
+    kill_switch_active: bool = False  # Server overrode Arduino valve
+    guard_enabled: bool = True  # Quad-Guard toggle
 
 
 # ── Calibration baseline ────────────────────────────────────

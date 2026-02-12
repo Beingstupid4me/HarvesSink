@@ -6,11 +6,18 @@ export interface SensorReading {
   ph: number;
   tds: number;
   turbidity: number;
-  temperature: number;
   gps_lat: number;
   gps_lng: number;
   valve_position: 0 | 1;
-  device_mode: "calibration" | "active" | "fault";
+  device_mode: "warmup" | "calibration" | "active" | "fault";
+
+  // Arduino edge fields
+  edge_state: number;         // 0=WARMUP, 1=CALIBRATING, 2=OPERATIONAL
+  edge_progress: number;      // Arduino calibration progress 0-100
+  edge_base_tds: number;      // Arduino learned TDS baseline
+  edge_nudge: boolean;        // Arduino adaptive nudge active
+  edge_valve: number;         // Arduino valve decision 0=Drain, 1=Harvest
+  edge_confidence: number;    // Arduino confidence counter 0-3
 }
 
 export interface InferenceResult {
@@ -28,6 +35,28 @@ export interface LivePacket {
   liters_saved: number;
   money_saved: number;
   lake_impact_score: number;
+  anomaly_tiers: AnomalyTiers;
+  kill_switch_active: boolean;
+  guard_enabled: boolean;
+}
+
+export interface AnomalyTierDetail {
+  fault: boolean;
+  detail: string;
+  name: string;
+  z_scores?: Record<string, number>;
+}
+
+export interface AnomalyTiers {
+  is_anomaly: boolean;
+  severity: "ok" | "warning" | "critical";
+  action: "harvest" | "caution" | "drain";
+  tiers: {
+    t1: AnomalyTierDetail;
+    t2: AnomalyTierDetail;
+    t3: AnomalyTierDetail;
+    t4: AnomalyTierDetail;
+  };
 }
 
 export interface NodeSummary {

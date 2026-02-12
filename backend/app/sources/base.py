@@ -20,6 +20,10 @@ class DataSource(ABC):
         """Read a single sensor packet. Blocks until data is available."""
         ...
 
+    async def write(self, data: str) -> None:
+        """Send data back to the device (e.g. kill-switch). No-op by default."""
+        pass
+
     @abstractmethod
     async def disconnect(self) -> None:
         """Clean up resources."""

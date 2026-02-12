@@ -8,6 +8,7 @@ import math
 from datetime import datetime
 
 from app.schemas import SensorReading, NodeSummary
+from app.config import settings
 
 
 # ── Delhi NCR bounding box ──────────────────────────────────
@@ -30,8 +31,8 @@ def _generate_node_positions(n: int) -> list[dict]:
     return nodes
 
 
-# Pre-generate positions (deterministic)
-_NODE_POSITIONS = _generate_node_positions(50)
+# Pre-generate positions (deterministic, uses config value)
+_NODE_POSITIONS = _generate_node_positions(settings.sim_num_nodes)
 
 
 def get_all_node_summaries() -> list[NodeSummary]:
