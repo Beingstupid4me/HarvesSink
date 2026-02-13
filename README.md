@@ -51,13 +51,6 @@ The platform features a **Municipal Monitor** that aggregates data from a simula
 
 ---
 
-## 👥 The Team
-This project was developed exclusively by:
-
-*   **Amartya Singh:** Main and complete development of the end-to-end software platform, including the Multi-Output XGBoost AI model, FastAPI backend architecture, Next.js industrial dashboard, and system integration.
-*   **Arushi Chawla:** Original project ideation and physical hardware rig setup, including sensor calibration and mechanical integration.
-
----
 
 ## 🚀 Quick Start Guide
 
